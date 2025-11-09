@@ -267,18 +267,6 @@ cd queuectl
 pip install -e .
 ```
 
-To verify:
-
-```bash
-queuectl check
-```
-
-Output:
-
-```
-True
-```
-
 ---
 
 ## 18. Conclusion
