@@ -1,4 +1,4 @@
-# QueueCTL — CLI-Based Background Job Queue System
+# QueueCTL, CLI-Based Background Job Queue System
 
 ## 1. Introduction
 
