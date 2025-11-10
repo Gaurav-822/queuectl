@@ -2,57 +2,67 @@
 
 ## 1. Introduction
 
-**QueueCTL** is a lightweight, production-grade backend system that manages background job execution through a **Command Line Interface (CLI)**.
-It enables reliable asynchronous processing using worker processes, supports automatic retry with exponential backoff, and maintains a Dead Letter Queue (DLQ) for permanently failed jobs.
+**QueueCTL** is a command-line-based background job management system developed as a technical assignment for **FLAM**.
+It provides a minimal yet production-oriented backend capable of handling asynchronous job execution through worker processes.
+The system supports **automatic retries with exponential backoff**, maintains a **Dead Letter Queue (DLQ)** for permanently failed jobs, and ensures **persistent state management** using SQLite3.
 
-This project implements a **minimal but production-oriented job queue system** that ensures persistence, fault tolerance, and configurability through a simple and extensible design.
-
----
-
-## 2. Objectives
-
-The key objectives of QueueCTL are:
-
-* To manage background jobs using worker processes.
-* To support automatic retries with exponential backoff for transient failures.
-* To maintain a **Dead Letter Queue (DLQ)** for jobs that fail after exceeding the maximum retry limit.
-* To persist job data using a reliable storage backend (SQLite3).
-* To provide complete operational control through a **CLI interface**.
+The project demonstrates reliability, configurability, and modular design principles through a clean, extensible architecture.
 
 ---
 
-## 3. Core Features
+## 2. Academic Integrity and Originality Declaration
 
-* Persistent job storage using **SQLite3** for durability across restarts.
-* Multi-worker processing using **Python multiprocessing**.
+This project has been independently designed and implemented by **Gaurav Bhushan Kumar** for submission to **FLAM**.
+All work is original, created without external code copying or collaboration.
+Any external concepts (e.g., multiprocessing, SQLite usage) have been adapted from standard Python documentation and implemented independently.
+
+This submission adheres strictly to institutional academic integrity guidelines prohibiting plagiarism or unauthorized assistance.
+
+---
+
+## 3. Objectives
+
+The primary objectives of QueueCTL are:
+
+* To manage and execute background jobs using worker processes.
+* To implement automatic job retries with exponential backoff for transient failures.
+* To maintain a **Dead Letter Queue (DLQ)** for jobs that permanently fail after exceeding retry limits.
+* To ensure persistence and fault tolerance using **SQLite3**.
+* To expose all operations through a consistent and intuitive **CLI interface**.
+
+---
+
+## 4. Core Features
+
+* Persistent job storage using **SQLite3** for durability and restart safety.
+* Multi-worker parallel processing with **Python multiprocessing**.
 * Configurable retry mechanism with **exponential backoff** (`delay = base ^ attempts`).
-* Dead Letter Queue (DLQ) management for failed jobs.
-* CLI commands for enqueueing, managing, and monitoring jobs.
-* Atomic job claiming using **SQLite transactions** to prevent duplicate processing.
-* Graceful shutdown of workers (workers complete current jobs before exiting).
-* Configurable system parameters (`max_retries`, `exp_backoff_base`, `poll_interval`) via CLI.
-* Standardized **exit codes** for operational clarity.
+* Dedicated **Dead Letter Queue (DLQ)** for permanently failed jobs.
+* Graceful worker shutdown - active jobs complete before exit.
+* Fully configurable runtime parameters (`max_retries`, `exp_backoff_base`, `poll_interval`).
+* Safe concurrent access using **SQLite transactions**.
+* Standardized **exit codes** for reliable scripting and monitoring.
 
 ---
 
-## 4. System Design Overview
+## 5. System Overview
 
-QueueCTL operates as a **CLI-based job management system** where users can enqueue jobs, start worker processes, and monitor system state.
-Each worker polls the database at a configurable interval, claims pending jobs atomically, and executes their associated shell commands.
-Failed jobs are retried automatically using an exponential backoff delay. If retries exceed the configured maximum, the job is moved to the **Dead Letter Queue (DLQ)**.
+QueueCTL operates as a **CLI-based asynchronous job queue system**.
+Users enqueue jobs with shell commands, which are processed by background workers that execute them in isolation.
+Workers handle retries using exponential backoff and move unrecoverable jobs to the DLQ for review or manual retry.
 
-### Components
+### System Components
 
-1. **CLI Layer** — User interface for managing jobs, workers, DLQ, and configurations.
-2. **Core Engine** — Handles job lifecycle, retries, and DLQ logic.
-3. **Worker Module** — Executes jobs in separate processes and ensures atomic job claiming.
-4. **Storage Layer** — SQLite-based persistent store for jobs and configuration.
+1. **CLI Layer** - User interface for all queue and configuration commands.
+2. **Core Logic** - Job lifecycle management (enqueue, retry, DLQ, config).
+3. **Worker Engine** - Executes jobs in subprocesses and handles retries.
+4. **Storage Layer** - SQLite-based persistent backend ensuring durability.
 
 ---
 
-## 5. Job Model
+## 6. Job Model
 
-Each job is stored in the database with the following structure:
+Each job is stored with the following structure:
 
 ```json
 {
@@ -68,70 +78,70 @@ Each job is stored in the database with the following structure:
 
 ---
 
-## 6. Job Lifecycle
+## 7. Job Lifecycle
 
-| State        | Description                                           |
-| ------------ | ----------------------------------------------------- |
-| `pending`    | Job is queued and waiting to be picked by a worker.   |
-| `processing` | Job is currently being executed by a worker.          |
-| `completed`  | Job has executed successfully.                        |
-| `failed`     | Job execution failed but is eligible for retry.       |
-| `dead`       | Job permanently failed and has been moved to the DLQ. |
+| State        | Description                              |
+| ------------ | ---------------------------------------- |
+| `pending`    | Job is queued and awaiting execution.    |
+| `processing` | Job is being executed by a worker.       |
+| `completed`  | Job finished successfully.               |
+| `failed`     | Job failed but can be retried.           |
+| `dead`       | Job failed permanently and moved to DLQ. |
 
 ---
 
-## 7. CLI Commands
+## 8. Command Line Interface (CLI)
 
-### 7.1 Job Management
+### Job Management
 
-| Command                                                | Description                               |
-| ------------------------------------------------------ | ----------------------------------------- |
-| `queuectl enqueue '{"id":"job1","command":"sleep 2"}'` | Enqueue a new job into the queue.         |
-| `queuectl list --state pending`                        | List jobs by state (optional filter).     |
-| `queuectl status`                                      | Display summary counts of all job states. |
+| Command                                                | Description                          |
+| ------------------------------------------------------ | ------------------------------------ |
+| `queuectl enqueue '{"id":"job1","command":"sleep 2"}'` | Enqueue a new job.                   |
+| `queuectl list --state pending`                        | List jobs filtered by state.         |
+| `queuectl status`                                      | Display a summary of all job states. |
 
-### 7.2 Worker Management
+### Worker Control
 
 | Command                           | Description                          |
 | --------------------------------- | ------------------------------------ |
 | `queuectl worker start --count 3` | Start one or more worker processes.  |
 | `queuectl worker stop`            | Gracefully stop all running workers. |
 
-### 7.3 Dead Letter Queue (DLQ)
+### Dead Letter Queue (DLQ)
 
-| Command                   | Description                                                |
-| ------------------------- | ---------------------------------------------------------- |
-| `queuectl dlq list`       | List all jobs in the DLQ.                                  |
-| `queuectl dlq retry job1` | Move a DLQ job back to the pending queue for reprocessing. |
+| Command                   | Description                                      |
+| ------------------------- | ------------------------------------------------ |
+| `queuectl dlq list`       | List jobs currently in DLQ.                      |
+| `queuectl dlq retry job1` | Move a DLQ job back to pending for reprocessing. |
 
-### 7.4 Configuration Management
+### Configuration Management
 
 | Command                                  | Description                      |
 | ---------------------------------------- | -------------------------------- |
-| `queuectl config set max-retries 5`      | Update the maximum retry count.  |
-| `queuectl config set exp-backoff-base 3` | Modify exponential backoff base. |
-| `queuectl config set poll-interval 4`    | Update worker polling interval.  |
+| `queuectl config set max-retries 5`      | Set maximum retry count.         |
+| `queuectl config set exp-backoff-base 3` | Update exponential backoff base. |
+| `queuectl config set poll-interval 4`    | Adjust worker polling interval.  |
 
 ---
 
-## 8. Retry and Backoff Mechanism
+## 9. Retry and Backoff
 
-QueueCTL implements exponential backoff to manage retries for failed jobs.
+Jobs use **exponential backoff** for retries:
 
 ```
 delay = base ^ attempts
 ```
 
-Example (with base = 2):
+Example (`base = 2`):
 
-| Attempt | Delay (seconds)  |
-| ------- | ---------------- |
-| 1       | 2                |
-| 2       | 4                |
-| 3       | 8                |
-| >3      | Job moved to DLQ |
+| Attempt | Delay (seconds) |
+| ------- | --------------- |
+| 1       | 2               |
+| 2       | 4               |
+| 3       | 8               |
+| >3      | Moved to DLQ    |
 
-Retries are determined dynamically using the job’s `updated_at` timestamp:
+Execution eligibility:
 
 ```
 current_time >= updated_at + (base ^ attempts)
@@ -139,66 +149,59 @@ current_time >= updated_at + (base ^ attempts)
 
 ---
 
-## 9. Worker Operation
+## 10. Worker Operation
 
-### Execution Flow
-
-1. Fetches eligible jobs from the queue using SQLite locking (`BEGIN IMMEDIATE`).
-2. Ensures the job’s retry delay has elapsed before execution.
-3. Executes the command using Python’s `subprocess` module.
-4. Updates job state to `completed` or triggers retry if failed.
-5. Sleeps for the configured polling interval if no jobs are available.
-6. Checks for stop signal and performs a graceful shutdown if detected.
+1. Atomically fetch eligible jobs (`BEGIN IMMEDIATE` transaction).
+2. Skip jobs until retry delay elapses.
+3. Execute job commands in isolated subprocesses.
+4. Update job state after completion or failure.
+5. Sleep for `poll_interval` seconds between polling cycles.
+6. Exit gracefully when stop signal is received.
 
 ### Graceful Shutdown
 
-Workers respond to:
+Triggered via:
 
-* `SIGINT` (Ctrl + C)
-* `SIGTERM` (via `queuectl worker stop`)
+* `SIGINT` (Ctrl+C) - from terminal
+* `SIGTERM` - via `queuectl worker stop`
 
-On receiving a signal, workers complete their current job before exiting cleanly.
-
----
-
-## 10. Persistent Storage Design
-
-**Database:** `~/.queuectl/jobs.db`
-
-**Tables:**
-
-* `jobs` — Stores all job definitions, states, and retry information.
-* `config` — Stores configurable runtime parameters.
-
-**Triggers:**
-
-* Automatically update `updated_at` on state changes (except when set to `pending`).
+Workers finish the current job before exiting safely.
 
 ---
 
-## 11. Configuration Defaults
+## 11. Database Structure
 
-| Key                | Default Value | Description                                          |
-| ------------------ | ------------- | ---------------------------------------------------- |
-| `max_retries`      | 3             | Maximum retry attempts per job before moving to DLQ. |
-| `exp_backoff_base` | 2             | Base used for exponential backoff delay.             |
-| `poll_interval`    | 2             | Worker polling interval in seconds.                  |
+| Table    | Description                                          |
+| -------- | ---------------------------------------------------- |
+| `jobs`   | Stores job metadata, states, and retry info.         |
+| `config` | Stores user-defined and system configuration values. |
 
----
-
-## 12. Exit Codes
-
-| Code | Constant         | Meaning                                   |
-| ---- | ---------------- | ----------------------------------------- |
-| `0`  | `EXIT_OK`        | Command executed successfully.            |
-| `1`  | `EXIT_ERR`       | General error occurred during execution.  |
-| `4`  | `EXIT_NOT_FOUND` | Requested job or configuration not found. |
-
-These exit codes enable integration with shell scripts and monitoring tools.
+**Database Location:**
+`~/.queuectl/jobs.db`
 
 ---
 
-## 13. Example Run
+## 12. Default Configuration
+
+| Key                | Default | Description                        |
+| ------------------ | ------- | ---------------------------------- |
+| `max_retries`      | 3       | Max retry attempts per job.        |
+| `exp_backoff_base` | 2       | Base used for exponential delay.   |
+| `poll_interval`    | 2       | Worker polling interval (seconds). |
+
+---
+
+## 13. Exit Codes
+
+| Code | Constant         | Meaning                  |
+| ---- | ---------------- | ------------------------ |
+| 0    | `EXIT_OK`        | Successful execution.    |
+| 1    | `EXIT_ERR`       | Error occurred.          |
+| 4    | `EXIT_NOT_FOUND` | Job or config not found. |
+
+---
+
+## 14. Example Usage
 
 ```bash
 # Enqueue jobs
@@ -208,14 +211,14 @@ queuectl enqueue '{"id":"job2","command":"bash -c '\''exit 1'\''"}'
 # Start workers
 queuectl worker start --count 2
 
-# Monitor system
+# Check status
 queuectl status
 
-# Review failed jobs
+# Review DLQ
 queuectl dlq list
 ```
 
-Example Output:
+Sample output:
 
 ```
 Queue Status Summary:
@@ -228,60 +231,83 @@ Queue Status Summary:
 
 ---
 
-## 14. Key Design Highlights
+## 15. Design Highlights
 
-* Concurrency-safe job execution using database-level transactions.
-* Delay and retry logic computed dynamically using timestamps.
-* Graceful shutdown implemented for process reliability.
-* All operational parameters configurable via CLI.
-* Extensible architecture for future enhancements (e.g., priority queues, scheduling).
+* Concurrency-safe job claiming with SQLite transactions.
+* Dynamic delay and retry calculation via timestamps.
+* Graceful termination with no data loss.
+* Runtime configurability via CLI.
+* Extensible architecture supporting future enhancements.
 
 ---
 
-## 15. Future Enhancements
+## 16. Future Enhancements
 
-* Scheduled or delayed job execution.
-* Web dashboard for real-time monitoring.
-* REST API for remote job management.
-* Worker health and uptime tracking.
+* Scheduled (time-delayed) jobs.
+* Web-based monitoring dashboard.
+* REST API integration.
+* Worker health tracking and metrics.
 * Priority-based job queue.
 
 ---
 
-## 16. Technology Stack
+## 17. Technology Stack
 
-| Component   | Technology      |
-| ----------- | --------------- |
-| Language    | Python 3        |
-| Database    | SQLite3         |
-| Concurrency | Multiprocessing |
-| Interface   | CLI (argparse)  |
+| Component   | Technology                        |
+| ----------- | --------------------------------- |
+| Language    | Python 3                          |
+| Database    | SQLite3                           |
+| Concurrency | Multiprocessing                   |
+| Interface   | CLI via argparse                  |
+| Packaging   | pipx (for isolated CLI execution) |
 
 ---
 
-## 17. Installation and Setup
+## 18. Installation (via `pipx`)
+
+QueueCTL is packaged for isolated CLI usage using **`pipx`**, which creates a self-contained virtual environment.
+
+### Steps:
 
 ```bash
-git clone https://github.com/your-repo/queuectl.git
+# 1. Clone the repository
+git clone https://github.com/Gaurav-822/queuectl.git
 cd queuectl
-pip install -e .
+
+# 2. Install using pipx
+pipx install .
+```
+
+Once installed, the `queuectl` command becomes globally available:
+
+```bash
+queuectl --help
+```
+
+### Updating the CLI
+
+If you make local changes and wish to reinstall:
+
+```bash
+pipx uninstall queuectl
+pipx install .
 ```
 
 ---
 
-## 18. Conclusion
+## 19. Conclusion
 
-**QueueCTL** provides a reliable, lightweight, and extensible background job queue system that fulfills the core requirements of asynchronous job execution with fault tolerance and configurability.
-Its modular architecture ensures maintainability and scalability while keeping implementation complexity minimal — making it an effective and practical solution for backend job processing.
+**QueueCTL** is a self-contained, reliable, and extensible background job queue system demonstrating the principles of asynchronous processing, exponential backoff retry logic, and robust CLI-driven configuration.
+Its modular structure and process isolation design make it suitable for production-grade backend use cases as well as academic evaluation.
 
 ---
 
-## 19. Author
+## 20. Author Declaration
 
-This project was developed by **Gaurav Bhushan Kumar** as a technical assignment submission for **FLAM**.
+**Developed and Submitted by:** **Gaurav Bhushan Kumar**, for: **FLAM - Technical Assignment Submission**
 
-| Contact Channel | Details |
-| :--- | :--- |
-| **Email** | [gaurav.moocs@gmail.com](mailto:gaurav.moocs@gmail.com) |
-| **LinkedIn** | [gauravbk08](https://www.linkedin.com/in/gauravbk08/) |
----
+| Contact  | Information                                                           |
+| -------- | --------------------------------------------------------------------- |
+| Email    | [gaurav.moocs@gmail.com](mailto:gaurav.moocs@gmail.com)               |
+| LinkedIn | [linkedin.com/in/gauravbk08](https://www.linkedin.com/in/gauravbk08/) |
+
