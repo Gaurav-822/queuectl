@@ -234,11 +234,11 @@ Queue Status Summary:
 
 ## 15. Documentation and Demonstration
 
-This submission includes additional supporting documentation and demonstration materials to illustrate both the **system design** and **runtime behavior**.
+This submission includes additional supporting documentation and demonstration materials to illustrate both the **database design** and **runtime behavior**.
 
 ### 15.1 Database Schema and ER Diagram
 
-A detailed schema representation of the QueueCTL database is shown below.
+A detailed schema representation of the QueueCTL database is shown in [`schema_er_diagram.md`](schema_er_diagram.md) and below.
 It illustrates the two main entities — `CONFIG` and `JOBS` — and their relationship.
 
 ```mermaid
