@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timedelta
-from queuectl.storage.db import get_connection, insert_job, list_jobs as db_list_jobs, get_config_value
+from queuectl.storage.db import get_connection, insert_job, list_jobs as db_list_jobs
 from queuectl.constants import VALID_STATES
 import os
 from queuectl.storage.db import get_connection
@@ -18,12 +18,8 @@ Inserting Maintaing and Updating Job's Implementations
 - DLQ operations (listing, retrying)
 """
 
-
-# working
+# Enqueue jobs by taking only 'id' and 'command' as input, other columns are self determined
 def enqueue_job(job_json: str):
-    """
-    Taking only 'id' and 'command' as input, other columns are self determined
-    """
     try:
         data = json.loads(job_json)
     except json.JSONDecodeError:
@@ -41,15 +37,14 @@ def enqueue_job(job_json: str):
     return {"status": "success", "message": f"Job '{data['id']}' added successfully."}
 
 
-# working
+# list all the jobs in the queue (sqlite3)
 def list_jobs(state=None):
-    """Return all jobs or jobs filtered by state."""
     if state and state not in VALID_STATES:
         raise ValueError(f"Invalid state '{state}'. Must be one of {VALID_STATES}.")
     return db_list_jobs(state)
 
 
-# working
+# function to update job state
 def update_job_state(job_id: str, new_state: str):
     if new_state not in VALID_STATES:
         raise ValueError(f"Invalid state '{new_state}'. Must be one of {VALID_STATES}.")
@@ -68,6 +63,7 @@ def update_job_state(job_id: str, new_state: str):
     return {"status": "updated", "id": job_id, "new_state": new_state}
 
 
+# retry a job after it failed in the first go
 def retry_job(job_id: str):
     conn = get_connection()
     cur = conn.cursor()
@@ -109,9 +105,8 @@ def retry_job(job_id: str):
     return {"status": "retry", "id": job_id, "attempts": attempts, "message": msg}
 
 
-# working
+# get summary of the queue
 def get_status_summary():
-    """Return a summary count of jobs by state."""
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("SELECT state, COUNT(*) AS count FROM jobs GROUP BY state;")
@@ -124,32 +119,16 @@ def get_status_summary():
     return summary
 
 
-# working
-def move_to_dlq(job_id: str):
-    """Force move a job to DLQ."""
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE jobs SET state='dead' WHERE id=?", (job_id,))
-    if cur.rowcount == 0:
-        conn.close()
-        raise ValueError(f"No job found with id '{job_id}'")
-    conn.commit()
-    conn.close()
-    return {"status": "moved", "id": job_id, "new_state": "dead"}
 
-
-
-# working
+# List all jobs currently in DLQ.
 def list_dlq():
-    """List all jobs currently in DLQ."""
     return db_list_jobs("dead")
 
 
-# working
 SHUTDOWN_FILE = os.path.expanduser("~/.queuectl/stop.flag")
 
+# manually move dlq jobs back to pending and re run those
 def retry_dlq(job_id: str):
-    """Manually move DLQ job back to pending (force re-run)."""
     conn = get_connection()
     cur = conn.cursor()
 

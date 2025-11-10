@@ -22,8 +22,16 @@ Each Worker's Functionality
 
 
 def handle_sigterm(sig, frame):
-    constants.SHUTDOWN = True
-    print(f"[Worker {os.getpid()}] Stopping gracefully, finishing current job...")
+    if not constants.SHUTDOWN:
+        constants.SHUTDOWN = True
+        if sig == signal.SIGINT:
+            sig_name = "SIGINT (Ctrl+C)"
+        elif sig == signal.SIGTERM:
+            sig_name = "SIGTERM"
+        else:
+            sig_name = f"signal {sig}"
+
+        print(f"[Worker {os.getpid()}] Received {sig_name}, will finish current job then stop.")
 
 
 # Catch both Ctrl+C and kill signals
@@ -96,11 +104,11 @@ def fetch_next_job():
 
 
 
-
 # execute the command using subprocess
 def execute_command(cmd: str):
     try:
-        result = subprocess.run(cmd, shell=True)
+        # result = subprocess.run(cmd, shell=True)
+        result = subprocess.run(cmd, shell=True, preexec_fn=os.setpgrp)
         return result.returncode == 0
     except Exception as e:
         print(f"[Worker {os.getpid()}] Command error: {e}")

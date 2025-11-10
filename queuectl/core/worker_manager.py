@@ -4,6 +4,8 @@ import signal
 from multiprocessing import Process
 from queuectl.core.worker import run_worker_loop
 from queuectl.constants import SHUTDOWN_FILE
+
+
 """
 Starting the Workers and Gracefully Stopping the Workers
 """
@@ -35,13 +37,33 @@ def start_workers(count: int):
     print("[Manager] All workers stopped.")
 
 
-# gracefully stopping the workers
+# gracefully stopping the workers (all the worker completes it's work before shutting down)
 def stop_workers():
+    # stop flag creation to stop all the workers to further take any job
     open(SHUTDOWN_FILE, "w").close()
     print("[Manager] Stop flag created, workers will exit gracefully.")
-    time.sleep(2)
 
+    term_wait = 3.0 # time before forcefully killing the processes
     for p in WORKERS:
-        if p.is_alive():
-            os.kill(p.pid, signal.SIGINT)
-            p.join(timeout=5)
+        p.join(timeout=term_wait)
+
+    still_alive = [p for p in WORKERS if p.is_alive()]
+    if still_alive:
+        print(f"[Manager] {len(still_alive)} worker(s) did not exit; sending SIGTERM")
+        for p in still_alive:
+            try:
+                os.kill(p.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        for p in still_alive:
+            p.join(timeout=term_wait)
+
+    still_alive = [p for p in WORKERS if p.is_alive()]
+    if still_alive:
+        print(f"[Manager] {len(still_alive)} worker(s) still running; sending SIGKILL")
+        for p in still_alive:
+            try:
+                os.kill(p.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            p.join(timeout=1.0)
