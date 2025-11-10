@@ -72,7 +72,8 @@ Each job is stored with the following structure:
   "attempts": 0,
   "max_retries": 3,
   "created_at": "2025-11-04T10:30:00Z",
-  "updated_at": "2025-11-04T10:30:00Z"
+  "updated_at": "2025-11-04T10:30:00Z",
+  "force_retry": 0
 }
 ```
 
