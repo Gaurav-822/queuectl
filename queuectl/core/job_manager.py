@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timedelta
 from queuectl.storage.db import get_connection, insert_job, list_jobs as db_list_jobs, get_config_value
 from queuectl.constants import VALID_STATES
+import os
+from queuectl.storage.db import get_connection
 
 
 """
@@ -80,11 +82,11 @@ def retry_job(job_id: str):
     attempts = int(job["attempts"]) + 1
     max_retries = int(job["max_retries"])
 
-    if attempts > max_retries:
+    if attempts >= max_retries:
         # Move job to Dead Letter Queue
         cur.execute(
-            "UPDATE jobs SET state='dead', updated_at=? WHERE id=?",
-            (datetime.utcnow().isoformat(), job_id),
+            "UPDATE jobs SET state='dead', attempts=?, updated_at=? WHERE id=?",
+            (attempts, datetime.utcnow().isoformat(), job_id),
         )
         msg = f"Job '{job_id}' moved to DLQ after {max_retries} retries."
     else:
@@ -143,15 +145,41 @@ def list_dlq():
     return db_list_jobs("dead")
 
 
-# error here, shows message
+# working
+SHUTDOWN_FILE = os.path.expanduser("~/.queuectl/stop.flag")
+
 def retry_dlq(job_id: str):
-    """Move a DLQ job back to pending and reset attempts."""
+    """Manually move DLQ job back to pending (force re-run)."""
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("UPDATE jobs SET state='pending', attempts=0 WHERE id=? AND state='dead'", (job_id,))
-    if cur.rowcount == 0:
+
+    # Verify DLQ job exists
+    cur.execute("SELECT id FROM jobs WHERE id=? AND state='dead'", (job_id,))
+    job = cur.fetchone()
+    if not job:
         conn.close()
         raise ValueError(f"No DLQ job found with id '{job_id}'")
+
+    # Move to pending, mark force_retry
+    cur.execute("""
+        UPDATE jobs
+        SET state='pending',
+            force_retry=1,
+            updated_at=DATETIME('now')
+        WHERE id=? AND state='dead'
+    """, (job_id,))
     conn.commit()
     conn.close()
-    return {"status": "retried", "id": job_id, "new_state": "pending"}
+
+    # Detect worker activity based on stop flag (fix this)
+    if os.path.exists(SHUTDOWN_FILE):
+        message = f"Job '{job_id}' moved from DLQ and will run as soon as a worker is started."
+    else:
+        message = f"Job '{job_id}' moved from DLQ and will be picked up shortly by an active worker."
+
+    return {
+        "status": "retried",
+        "id": job_id,
+        "new_state": "pending",
+        "message": message
+    }

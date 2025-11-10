@@ -18,7 +18,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # 1️⃣ Create CONFIG table (first)
+    # CONFIG TABLE
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS config (
         key TEXT PRIMARY KEY,
@@ -26,7 +26,6 @@ def init_db():
     );
     """)
 
-    # Insert default config values only if table empty
     cursor.execute("SELECT COUNT(*) AS cnt FROM config;")
     if cursor.fetchone()["cnt"] == 0:
         cursor.executemany(
@@ -34,11 +33,11 @@ def init_db():
             [
                 ("max_retries", "3"),
                 ("exp_backoff_base", "2"),
-                ("poll_interval", "2"),   # ✅ default poll rate in seconds
+                ("poll_interval", "2"),
             ],
         )
 
-    # 2️⃣ Create JOBS table
+    # JOBS TABLE with force_retry column
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS jobs (
         id TEXT PRIMARY KEY,
@@ -47,11 +46,12 @@ def init_db():
         attempts INTEGER NOT NULL DEFAULT 0,
         max_retries INTEGER NOT NULL DEFAULT 3,
         created_at TEXT NOT NULL DEFAULT (DATETIME('now')),
-        updated_at TEXT
+        updated_at TEXT,
+        force_retry INTEGER NOT NULL DEFAULT 0
     );
     """)
 
-    # 3️⃣ Trigger to update updated_at when state changes (except pending)
+    # TRIGGER to update updated_at when state changes
     cursor.execute("""
     CREATE TRIGGER IF NOT EXISTS trg_update_timestamp
     AFTER UPDATE OF state ON jobs
@@ -65,7 +65,18 @@ def init_db():
     """)
 
     conn.commit()
+
+    # Migration, backfill force_retry column if db already exists but column is missing
+    try:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN force_retry INTEGER NOT NULL DEFAULT 0;")
+        conn.commit()
+        print("[DB] Added missing column 'force_retry' to jobs table.")
+    except sqlite3.OperationalError:
+        # Column already exists — ignore
+        pass
+
     conn.close()
+
 
 
 

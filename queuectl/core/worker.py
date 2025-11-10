@@ -32,6 +32,7 @@ signal.signal(signal.SIGTERM, handle_sigterm)
 
 # fetching jobs with locking (using SQLite3's to prevent duplicate execution)
 # Also atomically claim one pending job whose retry delay has elapsed. (implementation of execution delay)
+# if using force job then skip the execution delay
 def fetch_next_job():
     conn = get_connection()
     cur = conn.cursor()
@@ -39,9 +40,8 @@ def fetch_next_job():
         base = get_config_value("exp_backoff_base") or 2
         conn.execute("BEGIN IMMEDIATE;")
 
-        # Select all pending jobs ordered by creation time
         cur.execute("""
-            SELECT id, command, attempts, max_retries, updated_at
+            SELECT id, command, attempts, max_retries, updated_at, force_retry
             FROM jobs
             WHERE state='pending'
             ORDER BY created_at ASC
@@ -53,22 +53,25 @@ def fetch_next_job():
 
         for job in jobs:
             attempts = int(job["attempts"])
+            force_retry = int(job["force_retry"])
 
-            # Calculate the delay and last updated time for this job
+            if force_retry == 1:
+                selected_job = job
+                break
+
             delay_seconds = base ** attempts if attempts > 0 else 0
             updated_at = datetime.fromisoformat(job["updated_at"]) if job["updated_at"] else now
 
-            # Job eligible if current_time >= updated_at + delay
             if now >= updated_at + timedelta(seconds=delay_seconds):
+                print("Ran after", delay_seconds, "seconds")
                 selected_job = job
-                break  # pick the first eligible job
+                break
 
         if not selected_job:
             conn.rollback()
             conn.close()
             return None
 
-        # Mark job as processing
         cur.execute("""
             UPDATE jobs
             SET state='processing', updated_at=DATETIME('now')
@@ -92,6 +95,7 @@ def fetch_next_job():
 
 
 
+
 # execute the command using subprocess
 def execute_command(cmd: str):
     try:
@@ -102,16 +106,13 @@ def execute_command(cmd: str):
         return False
 
 
-# main worker loop to execute commands
 def run_worker_loop():
     pid = os.getpid()
-    poll_interval = int(get_config_value("poll_interval") or 2)  # taking polling rate for each worker to decrease resource overhead
-
+    poll_interval = int(get_config_value("poll_interval") or 2)
     print(f"[Worker {pid}] Started")
 
     while not constants.SHUTDOWN:
         job = fetch_next_job()
-
         if not job:
             time.sleep(poll_interval)
             continue
@@ -120,24 +121,43 @@ def run_worker_loop():
         cmd = job["command"]
         print(f"[Worker {pid}] Processing job : {job_id} : {cmd}")
 
-        success = execute_command(cmd)
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT attempts, max_retries, force_retry FROM jobs WHERE id=?", (job_id,))
+        job_meta = cur.fetchone()
+        conn.close()
 
-        if success:
-            # Mark as completed
-            try:
+        if job_meta:
+            attempts = int(job_meta["attempts"])
+            max_retries = int(job_meta["max_retries"])
+            force_retry = int(job_meta["force_retry"])
+
+            if attempts > max_retries and not force_retry:
+                print(f"[Worker {pid}] Skipping job {job_id} (exceeded max retries).")
+                continue
+
+            if force_retry:
                 conn = get_connection()
                 cur = conn.cursor()
-                cur.execute(
-                    "UPDATE jobs SET state='completed', updated_at=DATETIME('now') WHERE id=?",
-                    (job_id,),
-                )
+                cur.execute("UPDATE jobs SET attempts = attempts + 1 WHERE id=?", (job_id,))
                 conn.commit()
                 conn.close()
-                print(f"[Worker {pid}] Job {job_id} completed successfully.")
-            except Exception as e:
-                print(f"[Worker {pid}] Error updating job {job_id}: {e}")
+                print(f"[Worker {pid}] Force retry: incremented attempts for job {job_id}.")
+
+        success = execute_command(cmd)
+
+        conn = get_connection()
+        cur = conn.cursor()
+
+        if success:
+            cur.execute(
+                "UPDATE jobs SET state='completed', updated_at=DATETIME('now'), force_retry=0 WHERE id=?",
+                (job_id,),
+            )
+            conn.commit()
+            conn.close()
+            print(f"[Worker {pid}] Job {job_id} completed successfully.")
         else:
-            # Failed, call retry
             print(f"[Worker {pid}] Job {job_id} failed. Retrying if possible...")
             try:
                 result = retry_job(job_id)
@@ -146,10 +166,13 @@ def run_worker_loop():
                 print(f"[Worker {pid}] Job {job_id} not found during retry.")
             except Exception as e:
                 print(f"[Worker {pid}] Unexpected retry error: {e}")
+            finally:
+                cur.execute("UPDATE jobs SET force_retry=0 WHERE id=?", (job_id,))
+                conn.commit()
+                conn.close()
 
-        # Graceful shutdown check after each job
         if constants.SHUTDOWN:
-            print(f"[Worker {pid}] Graceful shutdown — exiting after current job.")
+            print(f"[Worker {pid}] Graceful shutdown, exiting after current job.")
             break
 
     print(f"[Worker {pid}] Stopped.")
