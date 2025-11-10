@@ -4,6 +4,7 @@ from queuectl.storage.db import init_db
 from queuectl.core import job_manager
 from queuectl.core import worker_manager
 from queuectl.constants import EXIT_OK, EXIT_ERR, EXIT_NOT_FOUND
+from queuectl.core.config_manager import list_config, set_config, get_config
 
 
 # checking the CLI (for testing)
@@ -88,6 +89,35 @@ def cmd_status(_):
         print(f"  {state:10s}: {count}")
     return EXIT_OK
 
+# Config
+def cmd_config(args):
+    try:
+        if args.action == "list":
+            conf = list_config()
+            for k, v in conf.items():
+                print(f"{k:<20} {v}")
+            return EXIT_OK
+
+        elif args.action == "get":
+            value = get_config(args.key)
+            print(value)
+            return EXIT_OK
+
+        elif args.action == "set":
+            result = set_config(args.key, args.value)
+            print(f"{result['key']} updated to {result['value']}")
+            return EXIT_OK
+
+        else:
+            print("Invalid config command.")
+            return EXIT_ERR
+
+    except ValueError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return EXIT_NOT_FOUND
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return EXIT_ERR
 
 def main():
     init_db()
@@ -151,6 +181,23 @@ def main():
     # status
     status_parser = subparsers.add_parser("status", help="Show queue summary")
     status_parser.set_defaults(func=cmd_status)
+
+    # config
+    config_parser = subparsers.add_parser("config", help="Manage configuration values")
+    config_sub = config_parser.add_subparsers(dest="action", required=True)
+
+    config_list = config_sub.add_parser("list", help="List all configuration values")
+    config_list.set_defaults(func=cmd_config)
+
+    config_get = config_sub.add_parser("get", help="Get configuration value by key")
+    config_get.add_argument("key", help="Configuration key name")
+    config_get.set_defaults(func=cmd_config)
+
+    config_set = config_sub.add_parser("set", help="Set configuration value")
+    config_set.add_argument("key", help="Configuration key name")
+    config_set.add_argument("value", help="Value to assign")
+    config_set.set_defaults(func=cmd_config)
+
 
     # Parse + execute
     args = parser.parse_args()
