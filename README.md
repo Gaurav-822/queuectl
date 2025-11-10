@@ -218,7 +218,7 @@ queuectl status
 queuectl dlq list
 ```
 
-Sample output:
+Example output:
 
 ```
 Queue Status Summary:
@@ -231,7 +231,34 @@ Queue Status Summary:
 
 ---
 
-## 15. Design Highlights
+## 15. Documentation and Demonstration
+
+This submission includes additional supporting documentation and demonstration materials to illustrate both the **system design** and **runtime behavior**.
+
+### 15.1 Database Schema and ER Diagram
+
+A detailed database schema and entity-relationship visualization are available in:
+
+**[`schema_er_diagram.md`](schema_er_diagram.md)**
+Includes Mermaid-based ER diagram, table definitions, and triggers for the `jobs` and `config` tables.
+
+### 15.2 Demonstration Videos
+
+Two short demonstration videos are provided:
+
+1. **System Flow & Code Understanding**
+    [queue_ctl_flow_and_code_understanding.mp4](https://drive.google.com/file/d/1CpDjTkhsKTKlEnu6vNSojmlkDkwbb5B6/view?usp=sharing)
+   *Description:* Explains internal architecture, code organization, and worker logic.
+
+2. **CLI Demonstration**
+    [queue_ctl_cli_demo.mp4](https://drive.google.com/file/d/1zsPwTd2LDeGBw13vSCkS5VD206WSRq99/view?usp=sharing)
+   *Description:* Showcases practical usage of QueueCTL - enqueueing jobs, starting workers, viewing status, and retrying DLQ jobs.
+
+These materials provide a complete walkthrough of both **system design understanding** and **functional demonstration**.
+
+---
+
+## 16. Design Highlights
 
 * Concurrency-safe job claiming with SQLite transactions.
 * Dynamic delay and retry calculation via timestamps.
@@ -241,7 +268,7 @@ Queue Status Summary:
 
 ---
 
-## 16. Future Enhancements
+## 17. Future Enhancements
 
 * Scheduled (time-delayed) jobs.
 * Web-based monitoring dashboard.
@@ -251,7 +278,7 @@ Queue Status Summary:
 
 ---
 
-## 17. Technology Stack
+## 18. Technology Stack
 
 | Component   | Technology                        |
 | ----------- | --------------------------------- |
@@ -263,7 +290,7 @@ Queue Status Summary:
 
 ---
 
-## 18. Installation (via `pipx`)
+## 19. Installation (via `pipx`)
 
 QueueCTL is packaged for isolated CLI usage using **`pipx`**, which creates a self-contained virtual environment.
 
@@ -274,7 +301,14 @@ QueueCTL is packaged for isolated CLI usage using **`pipx`**, which creates a se
 git clone https://github.com/Gaurav-822/queuectl.git
 cd queuectl
 
-# 2. Install using pipx
+# 2. Create a virtual environment
+python3 -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+
+# 3. Install project dependencies
+pip install -r requirements.txt
+
+# 4. Install using pipx for isolated global CLI usage
 pipx install .
 ```
 
@@ -295,19 +329,20 @@ pipx install .
 
 ---
 
-## 19. Conclusion
+## 20. Conclusion
 
 **QueueCTL** is a self-contained, reliable, and extensible background job queue system demonstrating the principles of asynchronous processing, exponential backoff retry logic, and robust CLI-driven configuration.
 Its modular structure and process isolation design make it suitable for production-grade backend use cases as well as academic evaluation.
 
 ---
 
-## 20. Author Declaration
+## 21. Author Declaration
 
-**Developed and Submitted by:** **Gaurav Bhushan Kumar**, for: **FLAM - Technical Assignment Submission**
+**Developed and Submitted by:**
+**Gaurav Bhushan Kumar**
+for: **FLAM - Technical Assignment Submission**
 
-| Contact  | Information                                                           |
-| -------- | --------------------------------------------------------------------- |
-| Email    | [gaurav.moocs@gmail.com](mailto:gaurav.moocs@gmail.com)               |
-| LinkedIn | [linkedin.com/in/gauravbk08](https://www.linkedin.com/in/gauravbk08/) |
-
+| Contact      | Information                                                           |
+| ------------ | --------------------------------------------------------------------- |
+| **Email**    | [gaurav.moocs@gmail.com](mailto:gaurav.moocs@gmail.com)               |
+| **LinkedIn** | [linkedin.com/in/gauravbk08](https://www.linkedin.com/in/gauravbk08/) |
