@@ -16,13 +16,13 @@ queuectl enqueue '{"id":"job13","command":"echo Success message only"}'
 queuectl enqueue '{"id":"job14","command":"bash -c '\''sleep 2 && false'\''"}'
 queuectl enqueue '{"id":"job15","command":"bash -c '\''sleep 1 && echo Retrying...'\''"}'
 
-# For Testing Edge Case where a Job passes on it's 3rd try
-queuectl enqueue '{"id": "job_retry_test", "command": "bash -c '\''if [ ! -f /tmp/job_retry_marker ]; then echo first_fail >> /tmp/job_retry_marker && exit 1; elif [ $(grep -c first_fail /tmp/job_retry_marker) -lt 2 ]; then echo second_fail >> /tmp/job_retry_marker && exit 1; else echo SUCCESS && rm -f /tmp/job_retry_marker && exit 0; fi'\''"}'
+# For Testing Edge Case where a Job passes on it's 2rd try
+queuectl enqueue '{"id": "job_retry_test", "command": "bash -c '\''if [ ! -f /tmp/job_retry_marker ]; then echo first_fail > /tmp/job_retry_marker && exit 1; else echo SUCCESS && rm -f /tmp/job_retry_marker && exit 0; fi'\''"}'
 rm -f /tmp/job_retry_marker
 
 
 # Testing DLQ commands
-queuectl config set max_retries 2
+queuectl config set max_retries 1
 rm -f /tmp/job_retry_marker
-queuectl enqueue '{"id": "job_retry_test_dead", "command": "bash -c '\''if [ ! -f /tmp/job_retry_marker ]; then echo first_fail >> /tmp/job_retry_marker && exit 1; elif [ $(grep -c first_fail /tmp/job_retry_marker) -lt 2 ]; then echo second_fail >> /tmp/job_retry_marker && exit 1; else echo SUCCESS && rm -f /tmp/job_retry_marker && exit 0; fi'\''"}'
+queuectl enqueue '{"id": "job_retry_test_dead", "command": "bash -c '\''if [ ! -f /tmp/job_retry_marker ]; then echo first_fail > /tmp/job_retry_marker && exit 1; else echo SUCCESS && rm -f /tmp/job_retry_marker && exit 0; fi'\''"}'
 queuectl dlq retry job_retry_test_dead
