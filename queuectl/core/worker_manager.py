@@ -3,14 +3,13 @@ import time
 import signal
 from multiprocessing import Process
 from queuectl.core.worker import run_worker_loop
-
+from queuectl.constants import SHUTDOWN_FILE
 """
 Starting the Workers and Gracefully Stopping the Workers
 """
 
 
 WORKERS = []
-SHUTDOWN_FILE = os.path.expanduser("~/.queuectl/stop.flag")
 
 
 # spawn worker processes

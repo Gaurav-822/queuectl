@@ -7,6 +7,7 @@ from queuectl.storage.db import get_connection
 from queuectl.core.job_manager import retry_job
 from queuectl.storage.db import get_config_value
 import queuectl.constants as constants
+from queuectl.constants import SHUTDOWN_FILE
 
 
 
@@ -112,6 +113,11 @@ def run_worker_loop():
     print(f"[Worker {pid}] Started")
 
     while not constants.SHUTDOWN:
+        if os.path.exists(SHUTDOWN_FILE):
+            constants.SHUTDOWN = True
+            print(f"[Worker {pid}] Detected stop flag — shutting down gracefully.")
+            break
+
         job = fetch_next_job()
         if not job:
             time.sleep(poll_interval)

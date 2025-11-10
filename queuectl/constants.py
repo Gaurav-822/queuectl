@@ -1,3 +1,5 @@
+import os
+
 """
 Global constants shared across QueueCTL components.
 """
@@ -13,6 +15,8 @@ VALID_STATES = [
 
 # Global in-process shutdown flag
 SHUTDOWN = False
+SHUTDOWN_FILE = os.path.expanduser("~/.queuectl/stop.flag")
+
 
 # Worker exit reason codes
 EXIT_OK = 0
