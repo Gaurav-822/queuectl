@@ -237,10 +237,40 @@ This submission includes additional supporting documentation and demonstration m
 
 ### 15.1 Database Schema and ER Diagram
 
-A detailed database schema and entity-relationship visualization are available in:
+A detailed schema representation of the QueueCTL database is shown below.
+It illustrates the two main entities — `CONFIG` and `JOBS` — and their relationship.
 
-**[`schema_er_diagram.md`](schema_er_diagram.md)**
-Includes Mermaid-based ER diagram, table definitions, and triggers for the `jobs` and `config` tables.
+```mermaid
+erDiagram
+
+    CONFIG {
+        TEXT key PK "Primary key — config parameter name"
+        TEXT value "Stored configuration value"
+    }
+
+    JOBS {
+        TEXT id PK "Unique Job ID"
+        TEXT command "Shell command to execute"
+        TEXT state "Current lifecycle state"
+        INTEGER attempts "Number of attempts so far"
+        INTEGER max_retries "Maximum retry limit"
+        INTEGER force_retry "Flag for manual force execution"
+        TEXT created_at "Job creation timestamp"
+        TEXT updated_at "Last update timestamp"
+    }
+
+    %% Relationships
+    CONFIG ||--o{ JOBS : "applies to (via config values)"
+```
+
+**Description**
+
+* **CONFIG** — Stores global system parameters such as retry limits, polling intervals, and exponential backoff base values.
+* **JOBS** — Maintains individual job records with their lifecycle state, command, retry data, and timestamps.
+* **Relationship** — Configuration parameters in `CONFIG` influence the behavior of all jobs in `JOBS`.
+
+Database file path:
+`~/.queuectl/jobs.db`
 
 ### 15.2 Demonstration Videos
 
