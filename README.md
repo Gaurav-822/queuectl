@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-**QueueCTL** is a command-line-based background job management system developed as a technical assignment for **FLAM**.
+**QueueCTL** is a command-line-based background job management system.
 It provides a minimal yet production-oriented backend capable of handling asynchronous job execution through worker processes.
 The system supports **automatic retries with exponential backoff**, maintains a **Dead Letter Queue (DLQ)** for permanently failed jobs, and ensures **persistent state management** using SQLite3.
 
@@ -12,7 +12,7 @@ The project demonstrates reliability, configurability, and modular design princi
 
 ## 2. Academic Integrity and Originality Declaration
 
-This project has been independently designed and implemented by **Gaurav Bhushan Kumar** for submission to **FLAM**.
+This project has been independently designed and implemented by **Gaurav Bhushan Kumar**.
 All work is original, created without external code copying or collaboration.
 Any external concepts (e.g., multiprocessing, SQLite usage) have been adapted from standard Python documentation and implemented independently.
 
@@ -369,9 +369,8 @@ Its modular structure and process isolation design make it suitable for producti
 
 ## 21. Author Declaration
 
-**Developed and Submitted by:**
+**Developed by:**
 **Gaurav Bhushan Kumar**
-for: **FLAM - Technical Assignment Submission**
 
 | Contact      | Information                                                           |
 | ------------ | --------------------------------------------------------------------- |
